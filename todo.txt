@@ -1,0 +1,39 @@
+graphite is an in-browser graph editor with real-time collaborative editing.
+
+
+The intended use is as a project planner.
+The workload for any project is naturally representable as a directed acyclic graph, where nodes are tasks and edges are dependencies between tasks.
+This is similar in spirit to a Gantt chart in project management, or the dataflow model of computation.
+
+As such, there will be some specialized features geared toward this use case, for example:
+	-mark nodes as complete or incomplete (or more generally mark their "status" as in scrum)
+	-marking a node as complete with unsatisfied dependencies prompts an "are you sure" message
+	-by default, raise a warning upon detecting a cycle
+	-given a graph and a set of nodes which have been marked as complete, 
+	output the list of tasks which have no unsatisfied dependencies.
+	-A node can contain a link to a separate nested graph, which encodes the work required to complete the node's task
+	once all dependencies have been satisfied.
+	-Topologically sort the incomplete nodes in a graph to produce a project schedule
+
+However, there is no reason not to make it a more general graph viewer & editor.
+The following additional features are on the table:
+	-specifics of node metadata
+		-a "title panel" is a block of text of a small restricted length
+		-a "content panel" is a block of formatted text of unrestricted length
+		-each node and edge contains a title panel, which is always rendered
+		-each node contains a content panel, which is rendered if clicked on or hovered over
+	-graphs can export to / import from a variety of formats
+		-JSON
+		-adjacency list
+		-other prominent graph formats
+		-pencil & paper drawing (hence the name)
+	-force-based layout sanitization
+	-local navigation (focused on a node and its outgoing/incoming edges)
+	-mundane editor features
+		-backups
+		-rectangle select (left click & drag to select only nodes, right click & drag to select both nodes and edges)
+		-copy/paste/duplicate
+		-nodes stretch to encapsulate their contents
+		-search node contents with ctrl f
+	-given a selected group of nodes, create a new node on which they all depend
+	-given a selected group of nodes, create a new node which depends on all of them
