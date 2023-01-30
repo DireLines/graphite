@@ -1,0 +1,77 @@
+basic graph operations
+    add node
+    add edge
+    get node by id / by name
+    modify node properties
+    delete node
+    delete edge
+    copy/paste set of nodes
+    detect cycles
+    topological sort
+
+nested graph operations
+    move node A into node B (A and B starting at same level)
+    move node A out of node B (A and B starting at same level)
+    move set of nodes into node A (all starting at same level)
+    mode set of nodes out of node A (all starting at same level)
+    how to handle existing edges for these?
+
+task management specific operations
+    mark node completed
+    mark node incomplete
+    mark node optional/irrelevant
+    assign user to node
+    unassign user from node
+    find workable nodes (incomplete with no incomplete dependencies)
+    filter graph to subset with properties, in particular
+        nodes with specific assignee
+        nodes with specific assignee or nodes blocking one of those nodes
+    estimate time to complete set of nodes (best case, average case, worst case)
+        defaulting to entire project
+
+task template specific operations
+    mark fields as required or not
+    create placeholder value for field which doesn't count as filled out
+    check all required fields are filled
+
+integrations
+    github - trigger completion of node upon github action or vice versa
+    slack/email/whatever - just generally be able to do stuff on node completion
+
+alternate presentations of data
+    philosophy: people making the switch to this app should be able to work similarly to how they previously did, but there should also be "enticing features" that gently nudge them toward seeing the correspondence between their previous system and the graph and eventually using the graph view. These features will be implemented in terms of graph operations.
+    scrum board
+        group tasks by template
+        for each node in the template, show the set of tasks for which that node is workable
+        template inheritance rules should work this way
+            if node is pasted from template, inherit template id
+            if node is copy-pasted, inherit template id
+            if internal structure of node is changed, generate new template id for it
+        operations in scrum board view
+            "move story to column" := change completion status of story's node
+            new story on board := new task from board's template
+            add dependency between stories := add edge between 2 story nodes
+            no such concept as "epics": to nest nodes you have to go to graph view or nested list view
+    directories
+        like a tree of files, show nested structure but ignore edges
+        operations in nested lists view:
+            new task inside folder := create node inside folder node
+            move task around in file system := sequence of moving node up and down layers
+            sort/filter files in various way
+
+node properties
+    name - string
+    description - markdown block
+    completed - bool
+    assignee(s) - list of users
+    comments - markdown blocks
+    structure - nested DAG
+    opt-in properties
+        reporter(s) - list of users
+        acceptance criteria - markdown block
+        user-declared fields - markdown blocks
+        progress bar - int
+
+edge properties
+    start - node
+    end - node
