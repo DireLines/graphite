@@ -98,7 +98,7 @@ class Node:
     def check_invariants(self):
         if not self.has_structure():
             return
-        print(f"checking invariants for {self.name}")
+        # print(f"checking invariants for {self.name}")
         #if graph has structure, enforce the following invariants:
         assert(self.start.completed == self.is_workable())
         assert(self.end.completed == self.end.is_workable())
@@ -108,8 +108,7 @@ class Node:
             return
         self.start.set_completed(self.is_workable())
         self.end.set_completed(self.end.is_workable())
-        #TODO why does the following line cause infinite recursion?
-        # self.set_completed(self.end.completed and self.is_workable())
+        self.set_completed(self.end.completed and self.is_workable())
         self.check_invariants()
     def init_endpoints(self):
         self.start = Node(f"{self.name} start", f"node indicating that {self.name} has been started")
@@ -120,7 +119,6 @@ class Node:
         self.structure = Graph.new()
         self.structure.parent_node = self
         self.init_endpoints()
-        # print(f"{self.name} structure has {len(structure.nodes)} nodes and {len(structure.edges)} edges")
         self.encapsulate_nodes(structure.nodes)
         self.refresh_completion()
     def is_workable(self):
@@ -130,7 +128,9 @@ class Node:
     def has_structure(self):
         return self.structure is not None and len(self.structure.nodes) > 0
     def has_parent_graph(self):
-        return self
+        return self.parent_graph is not None 
+    def has_parent_node(self):
+        return self.parent_graph is not None and self.parent_graph.parent_node is not None
     def edges(self):
         if self.parent_graph == None:
             return []
@@ -162,10 +162,9 @@ class Node:
                 node.parent_graph.delete_node(node)
             self.structure.add_node(node)
         if not self.is_workable():
-            self.start.set_completed(False)
-    def set_completed(self,completed:bool):
+            self.start.set_completed(False, apply_to_children=True)
+    def set_completed(self,completed:bool,apply_to_children=False):
         if not self.completed and completed:
-            # print(f"completing {self.name}")
             self.completed = True
             if not self.is_workable():
                 print(f"hey, you can't set {self.name} to completed because not all its dependencies are satisfied")
@@ -175,28 +174,27 @@ class Node:
                 return
             #TODO: warn if things this task depends on are not complete
             #TODO: set things this task depends on to complete
-            has_parent = self.parent_graph is not None and self.parent_graph.parent_node is not None
-            if has_parent and self == self.parent_graph.parent_node.end and self.parent_graph.parent_node.is_workable():
-                # print(f"I am {self.name} and I need to complete my parent node {self.parent_graph.parent_node.name}")
+            has_parent_node = self.has_parent_node()
+            if has_parent_node and self == self.parent_graph.parent_node.end and self.parent_graph.parent_node.is_workable():
                 self.parent_graph.parent_node.set_completed(True)
             for node in self.parent_graph.get_outgoing_nodes(self):
-                # print(f"check outgoing node {node.name}")
                 if node.is_workable():
-                    # print(f"{node.name} is workable")
                     self.refresh_completion()
-                    if has_parent and node == self.parent_graph.parent_node.end:
-                        # print(f"{node.name} is end node of {self.parent_graph.parent_node.name} and I need to complete it")
+                    if has_parent_node and node == self.parent_graph.parent_node.end:
                         node.set_completed(True)
                     if node.has_structure():
-                        # print(f"{node.name} is itself a parent node, need to propagate completion to its children")
                         node.refresh_completion()
         if self.completed and not completed:
-            print(f"uncompleting {self.name}")
             self.completed = False
-            self.refresh_completion()
+            if self.has_structure() and apply_to_children:
+                for node in self.structure.nodes:
+                    node.set_completed(False,apply_to_children=True)
+                self.refresh_completion() #enforces invariants
             if self.has_parent_graph():
                 for node in self.parent_graph.get_outgoing_nodes(self):
                     node.set_completed(False)
+            if self.has_parent_node() and self == self.parent_graph.parent_node.end:
+                self.parent_graph.parent_node.set_completed(False)
     def describe(self, show_structure = True, show_edges=False):
         checkbox = "☑" if self.completed else " "
         status = "☐" if self.is_workable() and not self.completed else checkbox
@@ -243,15 +241,15 @@ class Examples:
         completion_order = [prep,design_pr,get_groceries,design_qa,design_deploy,produce_pr,produce_qa,produce_deploy,wash_dishes]
         for node in completion_order:
             print(g.describe())
-            # input(f'press enter to complete {node.name}')
+            input(f'press enter to complete {node.name}')
             node.set_completed(True)
             node.check_invariants()
             if g.is_completed():
                 print("you finished the project! yay!")
                 print(g.describe())
                 break
-        print("oh no, we actually didn't produce the widgets right, that step will have to be redone")
-        produce.set_completed(False)
+        input("oh no, we actually didn't produce the widgets right, that step will have to be redone")
+        produce.set_completed(False, apply_to_children=True)
         return g
 
 print(Examples.widgets().describe())
