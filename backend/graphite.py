@@ -30,24 +30,26 @@ class Graph:
     def add_node(self,node):
         self.nodes.append(node)
         node.parent_graph = self
-        self.refresh_workable_nodes()
+        self.refresh_node_completion()
     def get_node(self, id):
         for node in self.nodes:
             if node.id == id:
                 return node
         return None
-    def refresh_workable_nodes(self):
+    def refresh_node_completion(self):
         for node in self.nodes:
             node.refresh_completion()
-            node.check_invariants()
     def delete_node(self,node):
         node.parent_graph = None
         self.nodes.remove(node)
-    def add_edge(self, edge):
+    def add_edge(self, edge, allow_external_nodes=False):
         #TODO: reject unless start and end are both in self.nodes (by default)
+        if not allow_external_nodes and (edge.start.parent_graph != self or edge.end.parent_graph != self):
+            print(f"hey, you can't connect {edge.start.name} and {edge.end.name} because they are not both part of graph {self.id}")
+            return
         #TODO: reject if edge creates cycle (by default)
         self.edges.add(edge)
-        self.refresh_workable_nodes()
+        self.refresh_node_completion()
     def remove_edge(self, edge):
         self.edges.remove(edge)
     def get_incoming_nodes(self, node):
@@ -133,18 +135,19 @@ class Node:
             return []
         return self.parent_graph.get_incoming_edges(self).union(self.parent_graph.get_outgoing_edges(self))
     def move_nodes_up(nodes):
-        assert(len(set([node.parent_graph for node in nodes])) == 1) #all nodes start in same graph
-        assert(nodes[0].parent_graph.parent_node is not None)#not at top level
-        #TODO it
+        for node in nodes:
+            if not node.has_parent_node():
+                continue
+            edges = node.edges()
+
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
-        # assert(len(set([node.parent_graph for node in nodes])) == 1) #all nodes start in same graph
         if self.structure is None:
             self.add_structure()
         for node in nodes:
             edges = node.edges()
-            self.structure.add_edge(Edge(self.start, node))
-            self.structure.add_edge(Edge(node, self.end))
+            self.structure.add_edge(Edge(self.start, node),allow_external_nodes=True)
+            self.structure.add_edge(Edge(node, self.end),allow_external_nodes=True)
             for edge in edges:
                 if edge.start not in nodes:
                     #remap edge through self
@@ -153,7 +156,7 @@ class Node:
                     #remap edge through self
                     node.parent_graph.add_edge(Edge(self, edge.end))
                 node.parent_graph.remove_edge(edge)
-                self.structure.add_edge(edge)
+                self.structure.add_edge(edge, allow_external_nodes=True)
         for node in nodes:
             if node.has_parent_graph():
                 node.parent_graph.delete_node(node)
@@ -220,6 +223,8 @@ class Examples:
         design_qa = Node("Design QA","check to make sure the widget design is good")
         design_deploy = Node("Design Deploy","publish the final widget design")
         design = Node("Design","design process for the widgets")
+        # TODO why doesn't this method work?
+        # design = Node("Design","design process for the widgets", structure=Graph([design_pr,design_qa,design_deploy],[Edge(design_pr,design_qa),Edge(design_qa,design_deploy)]))
         design_steps = Graph([design,design_pr,design_qa,design_deploy],[Edge(design_pr,design_qa),Edge(design_qa,design_deploy)])
         design.encapsulate_nodes([design_pr,design_qa,design_deploy])
         produce_pr = Node("Produce Pull Request","merge the pull request")
@@ -250,8 +255,8 @@ class Examples:
                 print("you finished the project! yay!")
                 print(g.describe())
                 break
-        input("oh no, we actually didn't produce the widgets right, that step will have to be redone")
-        produce.set_completed(False, apply_to_children=True)
+        input("oh no, we actually didn't design the widgets right, that step will have to be redone")
+        design.set_completed(False, apply_to_children=True)
         return g
 
 print(Examples.widgets().describe())
