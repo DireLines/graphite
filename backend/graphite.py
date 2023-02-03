@@ -38,11 +38,8 @@ class Graph:
         return None
     def refresh_workable_nodes(self):
         for node in self.nodes:
-            if node.is_workable():
-                if node.has_structure():
-                    node.start.set_completed(True)
-            else:
-                node.set_completed(False)
+            node.refresh_completion()
+            node.check_invariants()
     def delete_node(self,node):
         node.parent_graph = None
         self.nodes.remove(node)
@@ -186,9 +183,10 @@ class Node:
                         node.refresh_completion()
         if self.completed and not completed:
             self.completed = False
-            if self.has_structure() and apply_to_children:
-                for node in self.structure.nodes:
-                    node.set_completed(False,apply_to_children=True)
+            if self.has_structure():
+                if apply_to_children:
+                    for node in self.structure.nodes:
+                        node.set_completed(False,apply_to_children=True)
                 self.refresh_completion() #enforces invariants
             if self.has_parent_graph():
                 for node in self.parent_graph.get_outgoing_nodes(self):
@@ -236,7 +234,11 @@ class Examples:
         g = Graph([prep,widgets,design,produce,get_groceries],[Edge(design,produce),Edge(get_groceries, produce)])
         wash_dishes = Node("Wash Dishes", "wash some dishes (forgot this step originally)")
         g.add_node(wash_dishes)
+        print(g.describe())
+        input('encapsulate')
         widgets.encapsulate_nodes([design, produce, get_groceries, wash_dishes])
+        print(g.describe())
+        input('add dependency')
         g.add_edge(Edge(prep, widgets))
         completion_order = [prep,design_pr,get_groceries,design_qa,design_deploy,produce_pr,produce_qa,produce_deploy,wash_dishes]
         for node in completion_order:
