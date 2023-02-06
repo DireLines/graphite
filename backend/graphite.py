@@ -1,3 +1,5 @@
+import pickle
+
 #helpers 
 def indent(s,num_spaces = 4):
     spaces = " " * num_spaces
@@ -65,9 +67,7 @@ class Graph:
         return set(filter(lambda edge: edge.start.id == node.id,self.edges))
     def get_workable_nodes(self):
         #TODO: make it not O(n^2)
-        return list(filter(
-            lambda node: (not node.completed) and all([dep.completed for dep in self.get_incoming_nodes(node)]),
-            self.nodes))
+        return list(filter(lambda node: (not node.completed) and node.is_workable(), self.nodes))
     def get_num_completed(self):
         return len(list(filter(lambda n: n.completed,self.nodes)))
     def get_progress(self):
@@ -85,6 +85,7 @@ class Graph:
 class Node:
     def __init__(self,name:str,desc:str="",structure:Graph = Graph.new()):
         self.id = variable_name('node')
+        self.template_id = variable_name('node template')
         self.name = name
         self.desc = desc
         self.completed = False
@@ -240,10 +241,10 @@ class Examples:
         wash_dishes = Node("Wash Dishes", "wash some dishes (forgot this step originally)")
         g.add_node(wash_dishes)
         print(g.describe())
-        input('encapsulate')
+        input('press enter to encapsulate widget steps inside Widgets node')
         widgets.encapsulate_nodes([design, produce, get_groceries, wash_dishes])
         print(g.describe())
-        input('add dependency')
+        input('press enter to add dependency prep work -> Widgets')
         g.add_edge(Edge(prep, widgets))
         completion_order = [prep,design_pr,get_groceries,design_qa,design_deploy,produce_pr,produce_qa,produce_deploy,wash_dishes]
         for node in completion_order:
@@ -252,8 +253,8 @@ class Examples:
             node.set_completed(True)
             node.check_invariants()
             if g.is_completed():
-                print("you finished the project! yay!")
                 print(g.describe())
+                print("you finished the project! yay!")
                 break
         input("oh no, we actually didn't design the widgets right, that step will have to be redone")
         design.set_completed(False, apply_to_children=True)
