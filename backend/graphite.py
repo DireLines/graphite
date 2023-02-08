@@ -33,10 +33,22 @@ class Graph:
         self.nodes.append(node)
         node.parent_graph = self
         self.refresh_node_completion()
-    def get_node(self, id):
+    def get_node(self, id,name=None):
+        if name is not None:
+            for node in self.nodes:
+                if node.name == name:
+                    return node
+                if node.has_structure():
+                    deep_get = node.structure.get_node(id, name=name)
+                    if deep_get is not None:
+                        return deep_get
         for node in self.nodes:
             if node.id == id:
                 return node
+            if node.has_structure():
+                deep_get = node.structure.get_node(id)
+                if deep_get is not None:
+                    return deep_get
         return None
     def refresh_node_completion(self):
         for node in self.nodes:
@@ -136,11 +148,50 @@ class Node:
             return []
         return self.parent_graph.get_incoming_edges(self).union(self.parent_graph.get_outgoing_edges(self))
     def move_nodes_up(nodes):
+        nodes = list(filter(lambda node: node.has_parent_node(), nodes)) #nodes at top level cannot be moved
         for node in nodes:
-            if not node.has_parent_node():
-                continue
+            print(f"removing {node.name}'s structure edges")
+            parent_node = node.parent_graph.parent_node
             edges = node.edges()
-
+            #break edges between node and structure start/end nodes
+            for edge in edges:
+                if edge.start == parent_node.start or edge.end == parent_node.end:
+                    print(f"removing edge {edge.describe()}")
+                    node.parent_graph.remove_edge(edge)
+                else:
+                    print(f"leaving edge {edge.describe()}")
+        for node in nodes:
+            print(f"moving {node.name} up")
+            parent_node = node.parent_graph.parent_node
+            edges = node.edges()
+            has_endpoint_outside_set = lambda edge: (edge.start not in nodes) or (edge.end not in nodes)
+            incoming_edges = list(filter(has_endpoint_outside_set,node.parent_graph.get_incoming_edges(node)))
+            outgoing_edges = list(filter(has_endpoint_outside_set,node.parent_graph.get_outgoing_edges(node)))
+            has_incoming_edges = len(incoming_edges) > 0
+            has_outgoing_edges = len(outgoing_edges) > 0
+            #if node has incoming and outgoing edges that remain in parent,
+            #break both (for now)
+            #TODO: prompt user to choose which way dependency should go
+            for edge in edges:
+                node.parent_graph.remove_edge(edge)
+                if edge.start not in nodes and not has_outgoing_edges:
+                    #remap edge through parent
+                    print("doing this")
+                    node.parent_graph.add_edge(Edge(edge.start, parent_node.end),allow_external_nodes=True)
+                    parent_node.parent_graph.add_edge(Edge(parent_node,node),allow_external_nodes=True)
+                    continue
+                if edge.end not in nodes and not has_incoming_edges:
+                    #remap edge through parent
+                    print("doing that")
+                    node.parent_graph.add_edge(Edge(parent_node.start, edge.end),allow_external_nodes=True)
+                    parent_node.parent_graph.add_edge(Edge(node,parent_node),allow_external_nodes=True)
+                    continue
+                if has_incoming_edges and has_outgoing_edges:
+                    continue
+                print(f"adding edge {edge.describe()} to parent graph")
+                parent_node.parent_graph.add_edge(edge, allow_external_nodes=True)
+            node.parent_graph.delete_node(node)
+            parent_node.parent_graph.add_node(node)
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
         if self.structure is None:
@@ -259,5 +310,18 @@ class Examples:
         input("oh no, we actually didn't design the widgets right, that step will have to be redone")
         design.set_completed(False, apply_to_children=True)
         return g
+    def abcd():
+        g = Graph.new()
+        a = Node("A")
+        b = Node("B")
+        c = Node("C")
+        d = Node("D")
+        d.encapsulate_nodes([a,b,c])
+        d.structure.add_edge(Edge(a,b))
+        d.structure.add_edge(Edge(b,c))
+        g.add_node(d)
+        Node.move_nodes_up([a,c])
+        a.set_completed(True)
+        return g
 
-print(Examples.widgets().describe())
+print(Examples.abcd().describe())

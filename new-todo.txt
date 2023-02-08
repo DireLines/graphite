@@ -1,7 +1,7 @@
 basic graph operations
     -add node
-    -add edge
-    get node by id / by name
+    ~add edge
+    -get node by id / by name
     -modify node properties
     ~delete node
     ~delete edge
@@ -12,15 +12,15 @@ basic graph operations
 done but revisit to handle edge cases
 nested graph operations
     -move node A into node B (A and B starting at same level)
-    -move node A out of node B (A and B starting at same level)
+    move node A out of node B (A and B starting at same level)
     -move set of nodes into node A (all starting at same level)
-    -mode set of nodes out of node A (all starting at same level)
-    -how to handle existing edges for these?
+    mode set of nodes out of node A (all starting at same level)
 
 task management specific operations
     ~mark node completed
     ~mark node incomplete
     mark node optional/irrelevant
+        -works inside node structure, but not top-level graph
     assign user to node
     unassign user from node
     -find workable nodes (incomplete with no incomplete dependencies)
