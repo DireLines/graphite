@@ -282,11 +282,16 @@ class Examples:
         b = Node("B")
         c = Node("C")
         d = Node("D")
-        d.encapsulate_nodes([a,b,c])
+        e = Node("E")
+        d.encapsulate_nodes([a,b,c,e])
         d.structure.add_edge(Edge(a,b))
         d.structure.add_edge(Edge(b,c))
+        e.encapsulate_nodes([a,b,c])
         g.add_node(d)
-        Node.move_nodes_up([a,b,c])
+        print(g.describe())
+        input("move C up")
+        c.move_up() #TODO why does this break the dependency between E and C?
+        # Node.move_nodes_up([c])
         return g
     def widgets():
         design_pr = Node("Design Pull Request","merge the pull request")
