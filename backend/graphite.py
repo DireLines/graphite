@@ -53,9 +53,11 @@ class Graph:
     def refresh_node_completion(self):
         for node in self.nodes:
             node.refresh_completion()
-    def delete_node(self,node):
+    def remove_node(self,node):
         node.parent_graph = None
         self.nodes.remove(node)
+        if len(self.nodes) == 0 and self.parent_node is not None:
+            self.parent_node.remove_structure()
     def add_edge(self, edge, allow_external_nodes=False):
         #TODO: reject unless start and end are both in self.nodes (by default)
         if not allow_external_nodes and (edge.start.parent_graph != self or edge.end.parent_graph != self):
@@ -133,6 +135,11 @@ class Node:
         self.init_endpoints()
         self.encapsulate_nodes(structure.nodes)
         self.refresh_completion()
+    def remove_structure(self):
+        assert(len(self.structure.nodes) == 0)
+        self.structure = None
+        self.start = None
+        self.end = None
     def is_workable(self):
         if self.parent_graph is None:
             return False #shouldn't happen
@@ -147,21 +154,18 @@ class Node:
         if self.parent_graph == None:
             return []
         return self.parent_graph.get_incoming_edges(self).union(self.parent_graph.get_outgoing_edges(self))
+    def move_up(self):
+        Node.move_nodes_up([self])
     def move_nodes_up(nodes):
         nodes = list(filter(lambda node: node.has_parent_node(), nodes)) #nodes at top level cannot be moved
         for node in nodes:
-            print(f"removing {node.name}'s structure edges")
             parent_node = node.parent_graph.parent_node
             edges = node.edges()
             #break edges between node and structure start/end nodes
             for edge in edges:
                 if edge.start == parent_node.start or edge.end == parent_node.end:
-                    print(f"removing edge {edge.describe()}")
                     node.parent_graph.remove_edge(edge)
-                else:
-                    print(f"leaving edge {edge.describe()}")
         for node in nodes:
-            print(f"moving {node.name} up")
             parent_node = node.parent_graph.parent_node
             edges = node.edges()
             has_endpoint_outside_set = lambda edge: (edge.start not in nodes) or (edge.end not in nodes)
@@ -176,21 +180,18 @@ class Node:
                 node.parent_graph.remove_edge(edge)
                 if edge.start not in nodes and not has_outgoing_edges:
                     #remap edge through parent
-                    print("doing this")
                     node.parent_graph.add_edge(Edge(edge.start, parent_node.end),allow_external_nodes=True)
                     parent_node.parent_graph.add_edge(Edge(parent_node,node),allow_external_nodes=True)
                     continue
                 if edge.end not in nodes and not has_incoming_edges:
                     #remap edge through parent
-                    print("doing that")
                     node.parent_graph.add_edge(Edge(parent_node.start, edge.end),allow_external_nodes=True)
                     parent_node.parent_graph.add_edge(Edge(node,parent_node),allow_external_nodes=True)
                     continue
                 if has_incoming_edges and has_outgoing_edges:
                     continue
-                print(f"adding edge {edge.describe()} to parent graph")
                 parent_node.parent_graph.add_edge(edge, allow_external_nodes=True)
-            node.parent_graph.delete_node(node)
+            node.parent_graph.remove_node(node)
             parent_node.parent_graph.add_node(node)
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
@@ -211,7 +212,7 @@ class Node:
                 self.structure.add_edge(edge, allow_external_nodes=True)
         for node in nodes:
             if node.has_parent_graph():
-                node.parent_graph.delete_node(node)
+                node.parent_graph.remove_node(node)
             self.structure.add_node(node)
         if not self.is_workable():
             self.start.set_completed(False, apply_to_children=True)
@@ -270,6 +271,19 @@ class Edge:
         return f"{self.start.name} -> {self.end.name}"
     
 class Examples:
+    def abcd():
+        g = Graph.new()
+        a = Node("A")
+        b = Node("B")
+        c = Node("C")
+        d = Node("D")
+        d.encapsulate_nodes([a,b,c])
+        d.structure.add_edge(Edge(a,b))
+        d.structure.add_edge(Edge(b,c))
+        g.add_node(d)
+        # a.move_up()
+        # Node.move_nodes_up([a,b,c]) #TODO why does this complete D? It should just leave D as a separate node
+        return g
     def widgets():
         design_pr = Node("Design Pull Request","merge the pull request")
         design_qa = Node("Design QA","check to make sure the widget design is good")
@@ -309,19 +323,6 @@ class Examples:
                 break
         input("oh no, we actually didn't design the widgets right, that step will have to be redone")
         design.set_completed(False, apply_to_children=True)
-        return g
-    def abcd():
-        g = Graph.new()
-        a = Node("A")
-        b = Node("B")
-        c = Node("C")
-        d = Node("D")
-        d.encapsulate_nodes([a,b,c])
-        d.structure.add_edge(Edge(a,b))
-        d.structure.add_edge(Edge(b,c))
-        g.add_node(d)
-        Node.move_nodes_up([a,c])
-        a.set_completed(True)
         return g
 
 print(Examples.abcd().describe())
