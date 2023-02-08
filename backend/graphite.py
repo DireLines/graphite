@@ -158,6 +158,8 @@ class Node:
         Node.move_nodes_up([self])
     def move_nodes_up(nodes):
         nodes = list(filter(lambda node: node.has_parent_node(), nodes)) #nodes at top level cannot be moved
+        parent_nodes = set([node.parent_graph.parent_node for node in nodes])
+        parent_completions = {node.id: node.completed for node in parent_nodes}
         for node in nodes:
             parent_node = node.parent_graph.parent_node
             edges = node.edges()
@@ -193,6 +195,9 @@ class Node:
                 parent_node.parent_graph.add_edge(edge, allow_external_nodes=True)
             node.parent_graph.remove_node(node)
             parent_node.parent_graph.add_node(node)
+        for node in parent_nodes:
+            node.set_completed(parent_completions[node.id]) #restore prior completion in case all structure has been moved out
+            node.refresh_completion() #enforce invariants
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
         if self.structure is None:
@@ -281,8 +286,7 @@ class Examples:
         d.structure.add_edge(Edge(a,b))
         d.structure.add_edge(Edge(b,c))
         g.add_node(d)
-        # a.move_up()
-        # Node.move_nodes_up([a,b,c]) #TODO why does this complete D? It should just leave D as a separate node
+        Node.move_nodes_up([a,b,c])
         return g
     def widgets():
         design_pr = Node("Design Pull Request","merge the pull request")
@@ -326,3 +330,4 @@ class Examples:
         return g
 
 print(Examples.abcd().describe())
+# print(Examples.widgets().describe())
