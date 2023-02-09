@@ -215,13 +215,13 @@ class Node:
         self.refresh_completion()
     def set_completed(self,completed:bool,apply_to_children=False, force_update=False):
         if (not self.completed or force_update) and completed:
-            self.completed = True
             if not self.is_workable():
                 print(f"hey, you can't set {self.name} to completed because not all its dependencies are satisfied")
                 dependencies = self.parent_graph.get_incoming_nodes(self)
                 unsat_deps = filter(lambda n: not n.completed, dependencies)
                 print(f"unsatisfied dependencies: {list(map(lambda n: n.name, unsat_deps))}")
                 return
+            self.completed = True
             #TODO: warn if things this task depends on are not complete
             #TODO: set things this task depends on to complete
             has_parent_node = self.has_parent_node()
@@ -286,14 +286,14 @@ class Examples:
         set_to_move = set([b,c])
         set_desc = describe(set_to_move)
         input(f"move {set_desc} up")
-        Node.move_nodes_up(set_to_move)
+        Node.move_nodes_up(set_to_move) #TODO: why does it try to connect A -> D?
         # print(g.describe())
         # input(f"move {set_desc} up again")
         # Node.move_nodes_up(set_to_move)
         # print(g.describe())
         # input(f"move {set_desc} up again")
         # Node.move_nodes_up(set_to_move)
-        completion_order = [a,b,c]
+        completion_order = [c,a,b,c]
         for node in completion_order:
             print(g.describe())
             input(f'press enter to complete {node.name}')
@@ -345,21 +345,23 @@ class Examples:
         design.set_completed(False, apply_to_children=True)
         return g
 
-# print(Examples.abcd().describe())
 # print(Examples.widgets().describe())
 
-g = Graph.new()
-a = Node("A")
-b = Node("B")
-c = Node("C")
-d = Node("D")
-e = Node("E")
-f = Node("F")
+print(Examples.abcd().describe())
 
-f.encapsulate_nodes([a,b,c,d,e])
-f.structure.add_edge(Edge(a,b)) 
-f.structure.add_edge(Edge(b,c)) 
-b.encapsulate_nodes([a,c])
-g.add_node(f)
+# g = Graph.new()
+# a = Node("A")
+# b = Node("B")
+# c = Node("C")
+# d = Node("D")
+# e = Node("E")
+# f = Node("F")
+# g.add_node(f)
 
-print(g.describe())
+# f.encapsulate_nodes([a,b,c,d,e])
+# f.structure.add_edge(Edge(a,b)) 
+# f.structure.add_edge(Edge(b,c)) 
+# b.encapsulate_nodes([d,e])
+# b.structure.add_edge(Edge(d,e))
+# a.set_completed(True)
+# print(g.describe())
