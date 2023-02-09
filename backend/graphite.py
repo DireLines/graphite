@@ -196,6 +196,7 @@ class Node:
             node.parent_graph.remove_node(node)
             parent_node.parent_graph.add_node(node)
         for node in parent_nodes:
+            # print(f"setting {node.name}.completed to {parent_completions[node.id]}")
             node.set_completed(parent_completions[node.id]) #restore prior completion in case all structure has been moved out
             node.refresh_completion() #enforce invariants
     def encapsulate_nodes(self, nodes):
@@ -214,15 +215,17 @@ class Node:
                     #remap edge through self
                     node.parent_graph.add_edge(Edge(self, edge.end))
                 node.parent_graph.remove_edge(edge)
-                self.structure.add_edge(edge, allow_external_nodes=True)
+                if edge.start in nodes and edge.end in nodes:
+                    self.structure.add_edge(edge, allow_external_nodes=True)
         for node in nodes:
             if node.has_parent_graph():
                 node.parent_graph.remove_node(node)
             self.structure.add_node(node)
         if not self.is_workable():
             self.start.set_completed(False, apply_to_children=True)
-    def set_completed(self,completed:bool,apply_to_children=False):
-        if not self.completed and completed:
+        self.refresh_completion()
+    def set_completed(self,completed:bool,apply_to_children=False, force_update=False):
+        if (not self.completed or force_update) and completed:
             self.completed = True
             if not self.is_workable():
                 print(f"hey, you can't set {self.name} to completed because not all its dependencies are satisfied")
@@ -242,7 +245,7 @@ class Node:
                         node.set_completed(True)
                     if node.has_structure():
                         node.refresh_completion()
-        if self.completed and not completed:
+        if (self.completed or force_update) and not completed:
             self.completed = False
             if self.has_structure():
                 if apply_to_children:
@@ -251,7 +254,7 @@ class Node:
                 self.refresh_completion() #enforces invariants
             if self.has_parent_graph():
                 for node in self.parent_graph.get_outgoing_nodes(self):
-                    node.set_completed(False)
+                    node.set_completed(False, force_update=True)
             if self.has_parent_node() and self == self.parent_graph.parent_node.end:
                 self.parent_graph.parent_node.set_completed(False)
     def describe(self, show_structure = True, show_edges=False):
@@ -274,7 +277,7 @@ class Edge:
         self.end = end
     def describe(self):
         return f"{self.start.name} -> {self.end.name}"
-    
+
 class Examples:
     def abcd():
         g = Graph.new()
@@ -286,12 +289,15 @@ class Examples:
         d.encapsulate_nodes([a,b,c,e])
         d.structure.add_edge(Edge(a,b))
         d.structure.add_edge(Edge(b,c))
-        e.encapsulate_nodes([a,b,c])
         g.add_node(d)
         print(g.describe())
-        input("move C up")
-        c.move_up() #TODO why does this break the dependency between E and C?
-        # Node.move_nodes_up([c])
+        input("move A->B->C into E")
+        e.encapsulate_nodes([a,b,c])
+        print(g.describe())
+        set_to_move = set([b,c])
+        set_desc = '[' + ', '.join(map(lambda n:n.name,set_to_move)) + ']'
+        input(f"move {set_desc} up")
+        Node.move_nodes_up(set_to_move)
         return g
     def widgets():
         design_pr = Node("Design Pull Request","merge the pull request")
