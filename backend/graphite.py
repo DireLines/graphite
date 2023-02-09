@@ -185,6 +185,7 @@ class Node:
             for edge in edges:
                 if edge.start == parent_node.start or edge.end == parent_node.end:
                     node.parent_graph.remove_edge(edge)
+        #move nodes
         for parent in parent_nodes:
             nodes_moved = list(filter(lambda node:node.parent_graph.parent_node == parent,nodes))
             if parent.has_parent_node():
@@ -201,6 +202,11 @@ class Node:
         assert(self not in nodes) #can't move into yourself
         if self.structure is None:
             self.add_structure()
+        for node in nodes:
+            edges = node.edges()
+            for edge in edges:
+                if edge.start == self or edge.end == self:
+                    self.parent_graph.remove_edge(edge)
         self.structure.encapsulate_nodes(nodes)
         for node in nodes:
             self.add_start_end_edges(node)
@@ -353,7 +359,7 @@ f = Node("F")
 f.encapsulate_nodes([a,b,c,d,e])
 f.structure.add_edge(Edge(a,b)) 
 f.structure.add_edge(Edge(b,c)) 
-b.encapsulate_nodes([a,c]) #TODO: this should delete the edges A -> B and B -> C as it doesn't make sense for a node to depend on the completion of its parent or vice versa
+b.encapsulate_nodes([a,c])
 g.add_node(f)
 
 print(g.describe())
