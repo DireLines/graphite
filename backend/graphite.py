@@ -192,7 +192,6 @@ class Node:
             else:
                 parent.parent_graph.encapsulate_nodes(nodes_moved)
         for node in parent_nodes:
-            print(f"setting {node.name}.completed to {parent_completions[node.id]}")
             node.set_completed(parent_completions[node.id]) #restore prior completion in case all structure has been moved out
             node.refresh_completion() #enforce invariants
     def add_start_end_edges(self, node):
@@ -200,7 +199,6 @@ class Node:
         self.structure.add_edge(Edge(node, self.end),allow_external_nodes=True)  
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
-        print(f"moving {describe(nodes)} into {self.name}")
         if self.structure is None:
             self.add_structure()
         self.structure.encapsulate_nodes(nodes)
@@ -341,5 +339,21 @@ class Examples:
         design.set_completed(False, apply_to_children=True)
         return g
 
-print(Examples.abcd().describe())
-print(Examples.widgets().describe())
+# print(Examples.abcd().describe())
+# print(Examples.widgets().describe())
+
+g = Graph.new()
+a = Node("A")
+b = Node("B")
+c = Node("C")
+d = Node("D")
+e = Node("E")
+f = Node("F")
+
+f.encapsulate_nodes([a,b,c,d,e])
+f.structure.add_edge(Edge(a,b)) 
+f.structure.add_edge(Edge(b,c)) 
+b.encapsulate_nodes([a,c]) #TODO: this should delete the edges A -> B and B -> C as it doesn't make sense for a node to depend on the completion of its parent or vice versa
+g.add_node(f)
+
+print(g.describe())
