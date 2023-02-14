@@ -60,23 +60,36 @@ class Graph:
         if len(self.nodes) == 0 and self.parent_node is not None:
             self.parent_node.remove_structure()
     def encapsulate_nodes(self, nodes):
-        print(f"moving {describe(nodes)} into graph {self.id}")
+        # print(f"moving {describe(nodes)} into graph {self.id}")
+        #assumption: the tricky case of moving nodes up with dependencies in parent node
+        #has been taken care of already.
         for node in nodes:
+            unparented = not node.has_parent_graph()
+            moving_up = node.has_parent_node() and node.parent_graph.parent_node in self.nodes
+            moving_down = self.parent_node is not None and node.has_parent_graph() and node.parent_graph == self.parent_node.parent_graph
+            assert(not (moving_down and moving_up))
+            assert(unparented or moving_down or moving_up)
             edges = node.edges()
             for edge in edges:
-                print(f"handling edge {edge.describe()}")
+                # print(f"handling edge {edge.describe()}")
                 if edge.start not in nodes:
                     #remap edge through self
-                    #TODO: handle case when moving node up into self
-                    node.parent_graph.add_edge(Edge(edge.start, self.parent_node))
+                    if moving_down:
+                        node.parent_graph.add_edge(Edge(edge.start, self.parent_node))
+                    if moving_up:
+                        node.parent_graph.add_edge(Edge(edge.start,node.parent_graph.parent_node.end))
+                        self.add_edge(Edge(node.parent_graph.parent_node,node),allow_external_nodes=True)
                 if edge.end not in nodes:
                     #remap edge through self
-                    #TODO: handle case when moving node up into self
-                    node.parent_graph.add_edge(Edge(self.parent_node, edge.end))
+                    if moving_down:
+                        node.parent_graph.add_edge(Edge(self.parent_node, edge.end))
+                    if moving_up:
+                        node.parent_graph.add_edge(Edge(node.parent_graph.parent_node.start,edge.end))
+                        self.add_edge(Edge(node, node.parent_graph.parent_node),allow_external_nodes=True)
                 node.parent_graph.remove_edge(edge)
                 if edge.start in nodes and edge.end in nodes:
                     self.add_edge(edge, allow_external_nodes=True)
-                print(f"finished handling edge {edge.describe()}")                
+                # print(f"finished handling edge {edge.describe()}")                
         for node in nodes:
             if node.has_parent_graph():
                 node.parent_graph.remove_node(node)
@@ -181,9 +194,9 @@ class Node:
         Node.move_nodes_up([self])
     def move_nodes_up(nodes):
         nodes = list(filter(lambda node: node.has_parent_node(), nodes)) #nodes at top level cannot be moved
-        print(f'nodes to be moved: {describe(nodes)}')
+        # print(f'nodes to be moved: {describe(nodes)}')
         parent_nodes = set([node.parent_graph.parent_node for node in nodes])
-        print(f'parent nodes: {describe(parent_nodes)}')
+        # print(f'parent nodes: {describe(parent_nodes)}')
         parent_completions = {node.id: node.completed for node in parent_nodes}
         #break edges between node and structure start/end nodes
         for node in nodes:
@@ -191,7 +204,7 @@ class Node:
             edges = node.edges()
             for edge in edges:
                 if edge.start == parent_node.start or edge.end == parent_node.end:
-                    print(f"removing edge {edge.describe()}")
+                    # print(f"removing edge {edge.describe()}")
                     node.parent_graph.remove_edge(edge)
         #move nodes
         for parent in parent_nodes:
@@ -199,29 +212,32 @@ class Node:
             target_name = "top-level graph"
             if parent.has_parent_node():
                 target_name = parent.parent_graph.parent_node.name
-            print(f"nodes to be moved from {parent.name} to {target_name}: {describe(nodes_moved)}")
+            # print(f"nodes to be moved from {parent.name} to {target_name}: {describe(nodes_moved)}")
+            #TODO: handle case when nodes_moved 
+            #collectively have both incoming/outgoing edges to nodes remaining in parent
+            #in future, prompt user which way to keep dependencies, for now break all of them
             if parent.has_parent_node():
                 parent.parent_graph.parent_node.encapsulate_nodes(nodes_moved)
             else:
                 parent.parent_graph.encapsulate_nodes(nodes_moved)
         for node in parent_nodes:
-            print(f"setting {node.name}.completed to {parent_completions[node.id]}")
+            # print(f"setting {node.name}.completed to {parent_completions[node.id]}")
             node.set_completed(parent_completions[node.id]) #restore prior completion in case all structure has been moved out
             node.refresh_completion() #enforce invariants
     def add_start_end_edges(self, node):
-        print(f"adding edges {self.start.name} -> {node.name} and {node.name} -> {self.end.name}")
+        # print(f"adding edges {self.start.name} -> {node.name} and {node.name} -> {self.end.name}")
         self.structure.add_edge(Edge(self.start, node),allow_external_nodes=True)
         self.structure.add_edge(Edge(node, self.end),allow_external_nodes=True)  
     def encapsulate_nodes(self, nodes):
         assert(self not in nodes) #can't move into yourself
-        print(f"moving {describe(nodes)} into {self.name}")
+        # print(f"moving {describe(nodes)} into {self.name}")
         if self.structure is None:
             self.add_structure()
         for node in nodes:
             edges = node.edges()
             for edge in edges:
                 if edge.start == self or edge.end == self:
-                    print(f'removing edge {edge.describe()} because one of the endpoints is the target node {self.name}')
+                    # print(f'removing edge {edge.describe()} because one of the endpoints is the target node {self.name}')
                     self.parent_graph.remove_edge(edge)
         self.structure.encapsulate_nodes(nodes)
         for node in nodes:
@@ -302,7 +318,7 @@ class Examples:
         set_to_move = set([b,c])
         set_desc = describe(set_to_move)
         input(f"move {set_desc} up")
-        Node.move_nodes_up(set_to_move) #TODO: why does it try to connect A -> D?
+        Node.move_nodes_up(set_to_move) #TODO: 
         # print(g.describe())
         # input(f"move {set_desc} up again")
         # Node.move_nodes_up(set_to_move)
@@ -363,7 +379,7 @@ class Examples:
 
 # print(Examples.widgets().describe())
 
-# print(Examples.abcd().describe())
+print(Examples.abcd().describe())
 
 g = Graph.new()
 a = Node("A")
@@ -382,14 +398,14 @@ print(g.describe())
 set_to_move = set([b,c])
 set_desc = describe(set_to_move)
 input(f"move {set_desc} up")
-Node.move_nodes_up(set_to_move) #TODO: why does it try to connect A -> D?
+Node.move_nodes_up(set_to_move)
 # print(g.describe())
 # input(f"move {set_desc} up again")
 # Node.move_nodes_up(set_to_move)
 # print(g.describe())
 # input(f"move {set_desc} up again")
 # Node.move_nodes_up(set_to_move)
-completion_order = [a,b,c]
+completion_order = [a,e,b,c,e]
 for node in completion_order:
     print(g.describe())
     input(f'press enter to complete {node.name}')
