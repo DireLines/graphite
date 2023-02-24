@@ -213,9 +213,20 @@ class Node:
             if parent.has_parent_node():
                 target_name = parent.parent_graph.parent_node.name
             # print(f"nodes to be moved from {parent.name} to {target_name}: {describe(nodes_moved)}")
-            #TODO: handle case when nodes_moved 
+            edges = set().union(*[node.edges() for node in nodes_moved])
+            has_start_outside_set = lambda edge: (edge.start not in nodes_moved)
+            has_end_outside_set = lambda edge: (edge.end not in nodes_moved)
+            incoming_edges = set(filter(has_start_outside_set,edges))
+            outgoing_edges = set(filter(has_end_outside_set,edges))
+            has_incoming_edges = len(incoming_edges) > 0
+            has_outgoing_edges = len(outgoing_edges) > 0
+            #handle case when nodes_moved 
             #collectively have both incoming/outgoing edges to nodes remaining in parent
-            #in future, prompt user which way to keep dependencies, for now break all of them
+            #TODO: prompt user which way to keep dependencies
+            #for now break all of them
+            if has_incoming_edges and has_outgoing_edges:
+                for edge in incoming_edges | outgoing_edges:
+                    parent.structure.remove_edge(edge)
             if parent.has_parent_node():
                 parent.parent_graph.parent_node.encapsulate_nodes(nodes_moved)
             else:
@@ -380,38 +391,3 @@ class Examples:
 # print(Examples.widgets().describe())
 
 print(Examples.abcd().describe())
-
-g = Graph.new()
-a = Node("A")
-b = Node("B")
-c = Node("C")
-d = Node("D")
-e = Node("E")
-d.encapsulate_nodes([a,b,c,e])
-d.structure.add_edge(Edge(a,b))
-d.structure.add_edge(Edge(b,c))
-g.add_node(d)
-print(g.describe())
-# input("move A->B->C into E")
-# e.encapsulate_nodes([a,b,c])
-# print(g.describe())
-set_to_move = set([b,c])
-set_desc = describe(set_to_move)
-input(f"move {set_desc} up")
-Node.move_nodes_up(set_to_move)
-# print(g.describe())
-# input(f"move {set_desc} up again")
-# Node.move_nodes_up(set_to_move)
-# print(g.describe())
-# input(f"move {set_desc} up again")
-# Node.move_nodes_up(set_to_move)
-completion_order = [a,e,b,c,e]
-for node in completion_order:
-    print(g.describe())
-    input(f'press enter to complete {node.name}')
-    node.set_completed(True)
-    node.check_invariants()
-    if g.is_completed():
-        print(g.describe())
-        print("you finished the project! yay!")
-        break
