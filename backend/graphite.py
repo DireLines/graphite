@@ -387,7 +387,18 @@ class Examples:
         input("oh no, we actually didn't design the widgets right, that step will have to be redone")
         design.set_completed(False, apply_to_children=True)
         return g
+    def big_line(num_nodes = 1000):
+        g = Graph.new()
+        g.add_node(Node("node 0"))
+        for i in range(1,num_nodes):
+            prev_node = g.get_node(name=f'node {i-1}')
+            new_node = Node(f'node {i}')
+            g.add_node(new_node)
+            g.add_edge(Edge(prev_node,new_node))
+        return g
 
 # print(Examples.widgets().describe())
 
-print(Examples.abcd().describe())
+# print(Examples.abcd().describe())
+
+print(Examples.big_line().describe())
