@@ -391,7 +391,7 @@ class Examples:
         g = Graph.new()
         g.add_node(Node("node 0"))
         for i in range(1,num_nodes):
-            prev_node = g.get_node(name=f'node {i-1}')
+            prev_node = g.get_node(i,name=f'node {i-1}')
             new_node = Node(f'node {i}')
             g.add_node(new_node)
             g.add_edge(Edge(prev_node,new_node))
@@ -399,6 +399,6 @@ class Examples:
 
 # print(Examples.widgets().describe())
 
-# print(Examples.abcd().describe())
+print(Examples.abcd().describe())
 
-print(Examples.big_line().describe())
+# print(Examples.big_line(4000).describe())
